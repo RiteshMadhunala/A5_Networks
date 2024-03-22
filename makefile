@@ -20,4 +20,4 @@ user2:
 	gcc -o user2 user2.c -L. -lmsocket
 
 clean:
-	rm -f gcc initmsocket.o msocket.o libmsocket.a
+	rm -f gcc init user1 user2 initmsocket.o msocket.o libmsocket.a
