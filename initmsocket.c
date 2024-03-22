@@ -336,6 +336,7 @@ int main()
     //  int * mtp_errno;
 
     shmid1 = shmget(key5, sizeof(int), 0777 | IPC_CREAT);
+    shmid2 = shmget(key1, sizeof(SOCK_INFO), IPC_CREAT | 0666);
 
     if (shmid1 == -1)
     {
@@ -350,7 +351,6 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    shmid2 = shmget(key1, sizeof(SOCK_INFO), IPC_CREAT | 0666);
 
     if (shmid2 == -1)
     {
@@ -439,17 +439,16 @@ int main()
     while (1)
     {
         // inet_pton(AF_INET, "127.0.0.1", &sockinfo->IP.sin_addr.s_addr);
-        sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+        // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;  removing this line
         sockinfo->sock_id = 0;
         sockinfo->port = 0;
         sockinfo->errorno == 0;
         printf("waiting\n");
         semaphore_wait(semid1);
         printf("semaphore worked\n");
-        printf("%d\n %d\n %d\n", sockinfo->sock_id, sockinfo->port, sockinfo->errorno);
+        printf("%d\n%d\n%d\n", sockinfo->sock_id, sockinfo->port, sockinfo->errorno);
         if (sockinfo->errorno == 0 && sockinfo->port == 0 && sockinfo->sock_id == 0)
         {
-            //commit
             // char ip_str[INET_ADDRSTRLEN];
             // inet_ntop(AF_INET, &sockinfo->IP.sin_addr.s_addr, ip_str, INET_ADDRSTRLEN);
             printf("It is a UDP socket call\n");
@@ -464,7 +463,11 @@ int main()
                 sockinfo->errorno = errno;
             }
             printf("Socket created\n");
-            sockinfo->sock_id = temp_sockid;
+            printf("temp_sockid: %d\n", temp_sockid);
+            sockinfo->udp_sock_id = temp_sockid;
+            // sockinfo->sock_id = temp_sockid;
+            printf("sockinfo->sockid: %d\n", sockinfo->sock_id);
+            printf("sockinfo->udp_sock_id: %d\n", sockinfo->udp_sock_id);
             semaphore_signal(semid2);
         }
         else if (sockinfo->port != 0) //&& sockinfo->IP.sin_addr.s_addr != INADDR_ANY
@@ -473,9 +476,14 @@ int main()
             // printf("port: %d\n", sockinfo->port);
             struct sockaddr_in socket;
             socket.sin_family = AF_INET;
-            socket.sin_addr.s_addr = sockinfo->IP.sin_addr.s_addr;
+            // socket.sin_addr.s_addr = sockinfo->IP;
+            inet_pton(AF_INET, sockinfo->IP, &socket.sin_addr.s_addr);
             socket.sin_port = htons(sockinfo->port);
             printf("Binding\n");
+            printf("sockid: %d\n", sockinfo->sock_id);
+            
+            printf("port: %d\n", sockinfo->port);
+            printf("IP: %s\n", sockinfo->IP);
             if ((bind(sockinfo->sock_id, (struct sockaddr *)&socket, sizeof(socket))) < 0)
             {
                 printf("Error in binding\n");

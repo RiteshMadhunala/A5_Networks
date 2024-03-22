@@ -29,10 +29,10 @@ int main()
     }
 
     char IP[20] = "127.0.0.1";
-    int SPORT = 50000;
+    int SPORT = 5000;
 
     char DIP[20] = "127.0.0.1";
-    int DPORT = 60000;
+    int DPORT = 6000;
 
     printf("socket created m_sockid:%d\n", sockfd);
 

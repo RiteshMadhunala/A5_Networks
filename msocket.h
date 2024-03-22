@@ -54,7 +54,8 @@ typedef struct
 typedef struct SOCK_INFO
 {
     int sock_id;
-    struct sockaddr_in IP;
+    int udp_sock_id;
+    char IP[16];
     int port;
     int errorno;
 } SOCK_INFO;

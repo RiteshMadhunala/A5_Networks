@@ -130,7 +130,7 @@ int m_socket(int domain, int type, int protocol)
     for (int i = 0; i < MAX_SOCKETS; ++i)
     {
 
-        printf("%d\n", SM[i].is_free);
+        printf("SM.is_free: %d\n", SM[i].is_free);
         if (SM[i].is_free == 1)
         {
             free_index = i;
@@ -138,7 +138,7 @@ int m_socket(int domain, int type, int protocol)
         }
     }
 
-    printf("%d\n", free_index);
+    printf("is_free: %d\n", free_index);
 
     // If no free entry is available
     if (free_index == -1)
@@ -162,7 +162,8 @@ int m_socket(int domain, int type, int protocol)
     {
         *mtp_errno = sockinfo->errorno;
         sockinfo->sock_id = 0;
-        sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+        // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+        memset(sockinfo->IP, 0, sizeof(sockinfo->IP));
         printf("error\n");
         sockinfo->port = 0;
         sockinfo->errorno = 0;
@@ -171,12 +172,14 @@ int m_socket(int domain, int type, int protocol)
 
     // Initialize SM entry with corresponding values
     SM[free_index].is_free = 0;
-    SM[free_index].udp_socket_id = sockinfo->sock_id;
-    printf("udp socketid: %d\n", sockinfo->sock_id);
+    SM[free_index].udp_socket_id = sockinfo->udp_sock_id;
+    printf("udp socketid: %d\n", sockinfo->udp_sock_id);
     SM[free_index].process_id = getpid();
     // Initialize other fields as needed
-    sockinfo->sock_id = 0;
-    sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+    sockinfo->udp_sock_id = 0;
+    // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+        memset(sockinfo->IP, 0, sizeof(sockinfo->IP));
+
     sockinfo->port = 0;
     sockinfo->errorno = 0;
 
@@ -193,10 +196,14 @@ int m_bind(int sockfd, const char *source_ip, uint16_t source_port, const char *
     }
 
     // Bind the UDP socket
-    inet_pton(AF_INET, source_ip, &sockinfo->IP.sin_addr.s_addr);
+    // inet_pton(AF_INET, source_ip, &sockinfo->IP.sin_addr.s_addr);
+    //copy source_ip to sockinfo->IP
+    strcpy(sockinfo->IP, source_ip);
+    printf("SM[sockfd].udp_socket_id: %d\n", SM[sockfd].udp_socket_id);
     sockinfo->sock_id = SM[sockfd].udp_socket_id;
+    printf("sockinfo->udp_sock_id: %d\n", sockinfo->udp_sock_id);
     sockinfo->port = source_port;
-
+    printf("Inside m_bind\n");
     semaphore_signal(semid1);
     semaphore_wait(semid2);
 
@@ -204,22 +211,26 @@ int m_bind(int sockfd, const char *source_ip, uint16_t source_port, const char *
     {
         sockinfo->errorno = errno; // Set errno to the corresponding error
         sockinfo->sock_id = 0;
-        sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+        // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+        //set sockinfo->IP to null using memset
+        memset(sockinfo->IP, 0, sizeof(sockinfo->IP));
         sockinfo->port = 0;
         sockinfo->errorno = 0;
         return sockinfo->errorno;
     }
 
     sockinfo->sock_id = 0;
-    sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+    // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+    memset(sockinfo->IP, 0, sizeof(sockinfo->IP));
     sockinfo->port = 0;
     sockinfo->errorno = 0;
 
     // Update SOCK_INFO with destination IP and port
     strcpy(SM[sockfd].other_end_ip, dest_ip);
     SM[sockfd].other_end_port = dest_port;
-    if (close(SM[sockfd].udp_socket_id) == -1)
+    if (SM[sockfd].udp_socket_id == -1)
     {
+        close(SM[sockfd].udp_socket_id);
         printf("Socket closed\n");
         return -1;
     }
