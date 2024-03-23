@@ -28,11 +28,11 @@ int main()
 
     char IP[20] = "127.0.0.1";
 
-    int SPORT = 60000;
+    int SPORT = 60006;
 
     char DIP[20] = "127.0.0.1";
 
-    int DPORT = 50000;
+    int DPORT = 50006;
 
     if (m_bind(sockfd, IP, SPORT, DIP, DPORT) < 0)
     {

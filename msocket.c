@@ -11,6 +11,11 @@
 #define MAX_RECV_BUFF 5
 #define MAX_MTP_SOCK 25
 
+// #ifdef DEBUG
+// #define myprintf printf
+// #else
+// #define myprintf //
+// #endif
 // float p = 0.75;
 
 int semid1, semid2;
@@ -130,7 +135,7 @@ int m_socket(int domain, int type, int protocol)
     for (int i = 0; i < MAX_SOCKETS; ++i)
     {
 
-        printf("SM.is_free: %d\n", SM[i].is_free);
+        printf("%d\n", SM[i].is_free);
         if (SM[i].is_free == 1)
         {
             free_index = i;
@@ -138,7 +143,7 @@ int m_socket(int domain, int type, int protocol)
         }
     }
 
-    printf("is_free: %d\n", free_index);
+    printf("%d\n", free_index);
 
     // If no free entry is available
     if (free_index == -1)
@@ -162,8 +167,7 @@ int m_socket(int domain, int type, int protocol)
     {
         *mtp_errno = sockinfo->errorno;
         sockinfo->sock_id = 0;
-        // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
-        memset(sockinfo->IP, 0, sizeof(sockinfo->IP));
+        sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
         printf("error\n");
         sockinfo->port = 0;
         sockinfo->errorno = 0;
@@ -172,14 +176,12 @@ int m_socket(int domain, int type, int protocol)
 
     // Initialize SM entry with corresponding values
     SM[free_index].is_free = 0;
-    SM[free_index].udp_socket_id = sockinfo->udp_sock_id;
-    printf("udp socketid: %d\n", sockinfo->udp_sock_id);
+    SM[free_index].udp_socket_id = sockinfo->sock_id;
+    printf("udp socketid: %d\n", sockinfo->sock_id);
     SM[free_index].process_id = getpid();
     // Initialize other fields as needed
-    sockinfo->udp_sock_id = 0;
-    // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
-        memset(sockinfo->IP, 0, sizeof(sockinfo->IP));
-
+    sockinfo->sock_id = 0;
+    sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
     sockinfo->port = 0;
     sockinfo->errorno = 0;
 
@@ -196,54 +198,44 @@ int m_bind(int sockfd, const char *source_ip, uint16_t source_port, const char *
     }
 
     // Bind the UDP socket
-    // inet_pton(AF_INET, source_ip, &sockinfo->IP.sin_addr.s_addr);
-    //copy source_ip to sockinfo->IP
-    strcpy(sockinfo->IP, source_ip);
-    printf("SM[sockfd].udp_socket_id: %d\n", SM[sockfd].udp_socket_id);
+    inet_aton(source_ip, &sockinfo->IP.sin_addr);
     sockinfo->sock_id = SM[sockfd].udp_socket_id;
-    printf("sockinfo->udp_sock_id: %d\n", sockinfo->udp_sock_id);
     sockinfo->port = source_port;
-    printf("Inside m_bind\n");
+
     semaphore_signal(semid1);
     semaphore_wait(semid2);
 
+    printf("%d\n %d\n %d\n", sockinfo->sock_id, sockinfo->port, sockinfo->errorno);
     if (sockinfo->sock_id == -1)
     {
-        sockinfo->errorno = errno; // Set errno to the corresponding error
+        sockinfo->errorno = -1; // Set errno to the corresponding error
         sockinfo->sock_id = 0;
-        // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
-        //set sockinfo->IP to null using memset
-        memset(sockinfo->IP, 0, sizeof(sockinfo->IP));
+        printf("error\n");
+        sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
         sockinfo->port = 0;
         sockinfo->errorno = 0;
         return sockinfo->errorno;
     }
 
     sockinfo->sock_id = 0;
-    // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
-    memset(sockinfo->IP, 0, sizeof(sockinfo->IP));
+    sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
     sockinfo->port = 0;
     sockinfo->errorno = 0;
 
     // Update SOCK_INFO with destination IP and port
     strcpy(SM[sockfd].other_end_ip, dest_ip);
     SM[sockfd].other_end_port = dest_port;
-    if (SM[sockfd].udp_socket_id == -1)
-    {
-        close(SM[sockfd].udp_socket_id);
-        printf("Socket closed\n");
-        return -1;
-    }
     return 1;
 }
 
 int m_sendto(int sockfd, char *buf, size_t len, const char *source_ip, uint16_t source_port, const char *dest_ip, uint16_t dest_port)
 {
-
+    printf("Inside m_sendto\n");
     if (strcmp(SM[sockfd].other_end_ip, dest_ip) != 0 || SM[sockfd].other_end_port != dest_port)
     {
         *mtp_errno = ENOTCONN; // Set global error variable to ENOTBOUND
-        return -1;             //***drop message
+        printf("ERROR SENDING\n");
+        return -1; //***drop message
     }
 
     int buffer_index = -1;
@@ -264,7 +256,10 @@ int m_sendto(int sockfd, char *buf, size_t len, const char *source_ip, uint16_t 
         return -1;
     }
 
+    printf("buf=%s\n", buf);
     strcpy(SM[sockfd].send_buff[i], buf);
+    printf("SM.sendbuf=%s\n", SM[sockfd].send_buff[i]);
+    len = strlen(SM[sockfd].send_buff[i]);
     return len;
 }
 

@@ -32,7 +32,7 @@
 #define SEND_WND 5
 #define RECEIVE_WND 5
 #define MAX_RECEIVE_BUFF 5
-#define MAX_SEND_BUFF 10
+#define MAX_SEND_BUFF 5
 
 void semaphore_wait(int semid);
 void semaphore_signal(int semid);
@@ -54,8 +54,7 @@ typedef struct
 typedef struct SOCK_INFO
 {
     int sock_id;
-    int udp_sock_id;
-    char IP[16];
+    struct sockaddr_in IP;
     int port;
     int errorno;
 } SOCK_INFO;
@@ -100,7 +99,7 @@ typedef struct MTPSocketEntry
     int udp_socket_id;
 
     char other_end_ip[16];
-    uint16_t other_end_port;
+    int other_end_port;
     char receive_buff[MAX_RECEIVE_BUFF][MAX_PAYLOAD_SIZE];
     char send_buff[MAX_SEND_BUFF][MAX_PAYLOAD_SIZE];
     send_window swnd;
