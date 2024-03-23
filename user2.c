@@ -18,6 +18,7 @@
 
 int main()
 {
+    initialize_semaphores();
     int sockfd = m_socket(AF_INET, SOCK_MTP, 0);
     if (sockfd < 0)
     {
