@@ -260,7 +260,7 @@ void *R_func(void *arg)
                         // sprintf(ack_msg, "%d", SM[i].rwnd.seq_nums[0]);
                         // strcat(ack_msg, "0001");
                         char ackleft[MAX_PAYLOAD_SIZE - 1] = {'\0'};
-                        convert_msg(ack_msg, ackleft, seq_num, 2);
+                        convert_msg(ack_msg, ackleft, seq_num+1, 2);
 
                         printf("ack_msg:%s\n", ack_msg);
                         printf("calling sendto\n");
@@ -390,8 +390,12 @@ void *S_func(void *arg)
                         int servaddrlen = sizeof(servaddr);
                         recvfrom(SM[i].udp_socket_id, buffer, sizeof(buffer), 0, (struct sockaddr *)&servaddr, &servaddrlen);
                         printf("ack received:%s\n", buffer);
+                        int seq_num = (buffer[0] & 0x0F);
+                        printf("ack seq_num %d\n", seq_num);
+                        SM[i].swnd.size++;
                         // if didnot receive acknowledgement send the msg again after a timeout
-
+                        // clear the sent message from SM
+                        memset(SM[i].send_buff[j], 0, sizeof(SM[i].send_buff[j]));
                         printf("j=%d", j);
                     }
                 }
