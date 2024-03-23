@@ -351,7 +351,6 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-
     if (shmid2 == -1)
     {
         printf("Unable to create shared mem\n");
@@ -481,7 +480,7 @@ int main()
             socket.sin_port = htons(sockinfo->port);
             printf("Binding\n");
             printf("sockid: %d\n", sockinfo->sock_id);
-            
+
             printf("port: %d\n", sockinfo->port);
             printf("IP: %s\n", sockinfo->IP);
             if ((bind(sockinfo->sock_id, (struct sockaddr *)&socket, sizeof(socket))) < 0)
