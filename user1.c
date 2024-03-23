@@ -47,7 +47,7 @@ int main()
         printf("Bind Failed\n");
         return 0;
     }
-    printf("%d\n", sockfd);
+    printf("sockfd: %d\n", sockfd);
     printf("Bind successful\n");
     //printf("using sendto now\n");
 
@@ -58,16 +58,25 @@ int main()
         printf("Enter message(1 to QUIT)\n");
 
         scanf("%s", buffer);
-        printf("%s\n", buffer);
+        printf("buffer: %s\n", buffer);
         if (strcmp(buffer, "1") == 0)
             break;
        printf("using sendto now\n");
         int n = m_sendto(sockfd, buffer, strlen(buffer) + 1, IP, SPORT, DIP, DPORT);
         printf("n= %d\n", n);
 
+        char buffer2[1024];
+        printf("Enter message2(1 to QUIT)\n");
+
+        scanf("%s", buffer2);
+        printf("buffer2: %s\n", buffer2);
+        n = m_sendto(sockfd, buffer2, strlen(buffer) + 1, IP, SPORT, DIP, DPORT);
+        printf("n= %d\n", n);
+
         while (1)
         {
             // printf("inside while\n");
+            // printf("Inside while and waiting for recvfrom\n");
             int n = m_recvfrom(sockfd, buffer, 1000);
             if (n != -1)
             {

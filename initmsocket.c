@@ -359,8 +359,9 @@ void *S_func(void *arg)
                     // printf(" swnd size = %d", SM[i].swnd.size);
                     if (l > 1 && SM[i].swnd.size > 0)
                     {
-                        SM[i].send_buff[j][strlen(SM[i].send_buff[i])] = '\0';
+                        SM[i].send_buff[j][strlen(SM[i].send_buff[j])] = '\0';
                         printf("Message found l=%d\n", l);
+                        printf("SM[i].send_buff[j] = %s\n", SM[i].send_buff[j]);
                         // convert the message in send_buff[j] to have the sequence number
                         char buffer[MAX_PAYLOAD_SIZE];
                         int type = 1; // data message
