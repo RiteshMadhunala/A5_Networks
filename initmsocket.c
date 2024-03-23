@@ -10,6 +10,7 @@
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/ipc.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <time.h>
@@ -21,7 +22,7 @@
 // #define printf
 // #endif
 
-#define T 5
+// #define T 5
 #define KEY 1234
 #define KEY2 1000
 #define MAX_MTP_SOCK 5 // need to change this
@@ -119,13 +120,13 @@ void *R_func(void *arg)
         }
     }
     struct timeval timeout;
-    timeout.tv_sec = 6;
-    timeout.tv_usec = 0;
-    maxfd = 1000000;
+    // maxfd = 1000000;
     while (1)
     {
         // check if any new MTP socket created if yes update
 
+        timeout.tv_sec = 6;
+        timeout.tv_usec = 6;
         int activity = select(maxfd + 1, &readfds, NULL, NULL, &timeout);
         // printf("activity=%d\n", activity);
         if (activity == -1)
@@ -134,7 +135,7 @@ void *R_func(void *arg)
         }
         else if (activity == 0)
         {
-            // printf("Timeout reached\n");
+            printf("Timeout reached\n");
 
             for (int i = 0; i < MAX_MTP_SOCK; i++)
             {
@@ -147,8 +148,8 @@ void *R_func(void *arg)
                     }
                 }
             }
-            //     // printf("maxfd=%d\n", maxfd);
-            //     // if available space in receive window is zero set nospace to 1
+            // printf("maxfd=%d\n", maxfd);
+            // if available space in receive window is zero set nospace to 1
             //     if (strlen(SM[i].rwnd.seq_nums) >= MAX_RECEIVE_BUFF)
             //     {
             //         SM[i].rwnd.nospace = 1;
@@ -237,7 +238,6 @@ void *R_func(void *arg)
                 }
             }
         }
-
     }
     return NULL;
 
@@ -251,23 +251,23 @@ void convert_msg(char *buffer, char *msg, int seq_num)
     // strcpy(buffer, seq_num_str);
     // printf("buffer=%s\n", buffer);
     // strcat(buffer, msg);
-    printf("buffer=%s\n", buffer);
-    printf("msg:%s\n", msg);
-    memset(buffer, 0, MAX_PAYLOAD_SIZE);
-    printf("seq_num = %d\n", seq_num);
-    int temp = seq_num & 0xF0;
-    // temp = temp << 4;
-    printf("temp:%d\n", temp);
-    buffer[0] = (char)temp;
+    // printf("buffer=%s\n", buffer);
+    // printf("msg:%s\n", msg);
+    // memset(buffer, 0, MAX_PAYLOAD_SIZE);
+    // printf("seq_num = %d\n", seq_num);
+    // int temp = seq_num & 0xF0;
+    // // temp = temp << 4;
+    // printf("temp:%d\n", temp);
+    // buffer[0] = (char)temp;
     // buffer[0] = (char)((seq_num & 0x0F) << 4);
     // buffer[0] = (char)seq_num;
-    printf("buffer[0]:%c\n", buffer[0]);
-    strncpy(buffer + 1, msg, MAX_PAYLOAD_SIZE - 1);
+    // printf("buffer[0]:%c\n", buffer[0]);
+    // strncpy(buffer + 1, msg, MAX_PAYLOAD_SIZE - 1);
     printf("buffer:%s\n", buffer);
-    // sprintf(buffer, "%d", seq_num);
+    sprintf(buffer, "%d", seq_num);
     // strcpy(buffer,seq_num);
-    // strcat(buffer,msg);
-    // printf("buffer:%s\n", buffer);
+    strcat(buffer, msg);
+    printf("buffer:%s\n", buffer);
 }
 
 void *garbage_func(void *arg)
@@ -299,7 +299,7 @@ void *garbage_func(void *arg)
     return NULL;
 }
 
-int send_seq_nums[MAX_MTP_SOCK] = {3};
+int send_seq_nums[MAX_MTP_SOCK] = {4};
 
 void *S_func(void *arg)
 {
@@ -355,12 +355,17 @@ void *S_func(void *arg)
                         }
                         printf("making sendto call\n");
                         printf("SM[i].swnd.size=%d\n", SM[i].swnd.size);
-                        int j = sendto(SM[i].udp_socket_id, (char *)buffer, strlen(buffer), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
+                        if (sendto(SM[i].udp_socket_id, (char *)buffer, strlen(buffer), 0, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+                        {
+                            printf("Error in sendto\n");
+                        };
                         SM[i].swnd.size--;
                         printf("SM[i].swnd.size=%d\n", SM[i].swnd.size);
                         // recvfrom acknowledgement from the dest address and ip
                         int servaddrlen = sizeof(servaddr);
                         recvfrom(SM[i].udp_socket_id, buffer, sizeof(buffer), 0, (struct sockaddr *)&servaddr, &servaddrlen);
+
+                        // if didnot receive acknowledgement send the msg again after a timeout
 
                         printf("j=%d", j);
                     }

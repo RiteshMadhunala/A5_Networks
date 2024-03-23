@@ -16,7 +16,7 @@
 
 #ifndef MSOCKET_H
 #define MSOCKET_H
-#define T 5
+#define T 15
 #ifndef MTP_CONFIG_H
 #define MTP_CONFIG_H
 
