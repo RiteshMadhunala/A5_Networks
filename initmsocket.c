@@ -15,16 +15,16 @@
 #include <time.h>
 #include "msocket.h"
 
-#ifdef DEBUG
-#define myprintf printf
-#else
-#define myprintf
-#endif
+// #ifdef DEBUG
+// #define printf printf
+// #else
+// #define printf
+// #endif
 
 #define T 5
 #define KEY 1234
 #define KEY2 1000
-#define MAX_MTP_SOCK 25
+#define MAX_MTP_SOCK 5 // need to change this
 #define IP_ADDRESS_MAX_LENGTH 46
 // #define SEND_WND 10
 // // #define RECEIVE_WND 5
@@ -82,7 +82,7 @@ float p = 0.75;
 //     send_window swnd;
 //     receive_window rwnd;
 // } MTPSocketEntry;
-
+int err;
 int check_msg(char *msg)
 {
     if (msg[0] == '0' && msg[1] == '0' && msg[2] == '0' && msg[3] == '0')
@@ -101,7 +101,7 @@ int check_msg(char *msg)
 
 void *R_func(void *arg)
 {
-    myprintf("R_func running\n");
+    printf("R_func running\n");
 
     MTPSocketEntry *SM = (MTPSocketEntry *)arg;
     fd_set readfds;
@@ -119,21 +119,22 @@ void *R_func(void *arg)
         }
     }
     struct timeval timeout;
-    timeout.tv_sec = 3;
+    timeout.tv_sec = 6;
     timeout.tv_usec = 0;
-
+    maxfd = 1000000;
     while (1)
     {
         // check if any new MTP socket created if yes update
 
         int activity = select(maxfd + 1, &readfds, NULL, NULL, &timeout);
+        // printf("activity=%d\n", activity);
         if (activity == -1)
         {
             perror("select");
         }
         else if (activity == 0)
         {
-            myprintf("Timeout reached\n");
+            // printf("Timeout reached\n");
 
             for (int i = 0; i < MAX_MTP_SOCK; i++)
             {
@@ -145,26 +146,42 @@ void *R_func(void *arg)
                         maxfd = SM[i].udp_socket_id;
                     }
                 }
-
-                // if available space in receive window is zero set nospace to 1
-                if (strlen(SM[i].rwnd.seq_nums) >= MAX_RECEIVE_BUFF)
-                {
-                    SM[i].rwnd.nospace = 1;
-                }
-                else
-                {
-                    // after we know space is there we send back an ACK with the last acknowledged seq number
-                    // and the rwnd size
-                    char ack_msg[MAX_PAYLOAD_SIZE];
-                    sprintf(ack_msg, "%d", SM[i].rwnd.seq_nums[0]);
-                    strcat(ack_msg, "0001");
-                    sendto(SM[i].udp_socket_id, ack_msg, sizeof(ack_msg), 0, NULL, 0);
-                }
             }
+            //     // printf("maxfd=%d\n", maxfd);
+            //     // if available space in receive window is zero set nospace to 1
+            //     if (strlen(SM[i].rwnd.seq_nums) >= MAX_RECEIVE_BUFF)
+            //     {
+            //         SM[i].rwnd.nospace = 1;
+            //     }
+            //     else if (SM[i].udp_socket_id > -1)
+            //     {
+            //         // after we know space is there we send back an ACK with the last acknowledged seq number
+            //         // and the rwnd size
+            //         char ack_msg[MAX_PAYLOAD_SIZE];
+            //         sprintf(ack_msg, "%d", SM[i].rwnd.seq_nums[0]);
+            //         strcat(ack_msg, "0001");
+            //         struct sockaddr_in servaddr;
+            //         servaddr.sin_family = AF_INET;
+            //         servaddr.sin_port = htons(SM[i].other_end_port);
+            //         printf("SM[i].other_end_port=%d\n", SM[i].other_end_port);
+            //         err = inet_aton(SM[i].other_end_ip, &servaddr.sin_addr);
+            //         if (err == 0)
+            //         {
+            //             printf("Error in ip-conversion\n");
+            //             printf("Before R exit\n");
+            //             exit(EXIT_FAILURE);
+            //         }
+            //         // printf("IN R\n");
+            //         // printf("i=%d udpsock=%d  otherendport=%d  otherendip=%s\n", i, SM[i].udp_socket_id, SM[i].other_end_port, SM[i].other_end_ip);
+            //         // int j = sendto(SM[i].udp_socket_id, ack_msg, strlen(ack_msg), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
+            //         // printf("j=%d", j);
+            //         // sendto(SM[i].udp_socket_id, ack_msg, sizeof(ack_msg), 0, NULL, 0);
+            //     }
+            // }
         }
         else
         {
-            myprintf("Found active socket\n");
+            printf("Found active socket\n");
             for (int i = 0; i < MAX_MTP_SOCK; i++)
             {
                 if (FD_ISSET(SM[i].udp_socket_id, &readfds))
@@ -178,12 +195,12 @@ void *R_func(void *arg)
 
                     if (dropMessage(p))
                     {
-                        myprintf("Dropping Message\n");
+                        printf("Dropping Message\n");
                         continue;
                     }
                     else
                     {
-                        myprintf("Received: %s\n", buffer);
+                        printf("Received: %s\n", buffer);
                         // check the message type if it is a data message store in the receive buffer and send an ack back
                         if (check_msg(buffer) == 1)
                         {
@@ -221,17 +238,36 @@ void *R_func(void *arg)
             }
         }
 
-        return NULL;
     }
+    return NULL;
 
     // while adding in the send buffer or while making the send to call we take care of the seq_num
 }
 void convert_msg(char *buffer, char *msg, int seq_num)
 {
-    char seq_num_str[10];
-    sprintf(seq_num_str, "%d", seq_num);
-    strcpy(buffer, seq_num_str);
-    strcat(buffer, msg);
+    // char seq_num_str[4];
+    // sprintf(seq_num_str, "%d", seq_num);
+    // printf("seq_num_str=%s\n", seq_num_str);
+    // strcpy(buffer, seq_num_str);
+    // printf("buffer=%s\n", buffer);
+    // strcat(buffer, msg);
+    printf("buffer=%s\n", buffer);
+    printf("msg:%s\n", msg);
+    memset(buffer, 0, MAX_PAYLOAD_SIZE);
+    printf("seq_num = %d\n", seq_num);
+    int temp = seq_num & 0xF0;
+    // temp = temp << 4;
+    printf("temp:%d\n", temp);
+    buffer[0] = (char)temp;
+    // buffer[0] = (char)((seq_num & 0x0F) << 4);
+    // buffer[0] = (char)seq_num;
+    printf("buffer[0]:%c\n", buffer[0]);
+    strncpy(buffer + 1, msg, MAX_PAYLOAD_SIZE - 1);
+    printf("buffer:%s\n", buffer);
+    // sprintf(buffer, "%d", seq_num);
+    // strcpy(buffer,seq_num);
+    // strcat(buffer,msg);
+    // printf("buffer:%s\n", buffer);
 }
 
 void *garbage_func(void *arg)
@@ -263,9 +299,11 @@ void *garbage_func(void *arg)
     return NULL;
 }
 
+int send_seq_nums[MAX_MTP_SOCK] = {3};
+
 void *S_func(void *arg)
 {
-    myprintf("S_func running\n");
+    printf("S_func running\n");
     time_t last_sent;
     MTPSocketEntry *SM = (MTPSocketEntry *)arg;
     while (1)
@@ -274,10 +312,12 @@ void *S_func(void *arg)
         // get current time and store it in a variable
         time_t current_time;
         time(&current_time);
+        printf("current_time=%ld\n", current_time);
+        printf("last_sent=%ld\n", last_sent);
         if (current_time - last_sent >= T)
         {
             // send the message
-            myprintf("Sending message\n");
+            // printf("Sending message\n");
             for (int i = 0; i < MAX_MTP_SOCK; i++)
             {
                 // if there is pending message in the send buffer sending it using sendto function
@@ -286,13 +326,43 @@ void *S_func(void *arg)
                 {
                     // create mutex for when using SM
                     // we add the message to the send buffer and then send it using sendto
-                    if (strlen(SM[i].send_buff[SM[i].swnd.seq_nums[j] % MAX_SEND_BUFF]) > 0 && SM[i].swnd.size > 0)
+                    // printf("message = %s", SM[i].send_buff[i]);
+
+                    printf("SM[i].send_buff[j] = %s\n", SM[i].send_buff[j]);
+                    int l = strlen(SM[i].send_buff[j]);
+                    // printf(" k=%d", SM[i].swnd.seq_nums[j]);
+                    // printf(" l=%d\n", l);
+                    // printf(" swnd size = %d", SM[i].swnd.size);
+                    if (l > 1 && SM[i].swnd.size > 0)
                     {
+                        SM[i].send_buff[j][strlen(SM[i].send_buff[i])] = '\0';
+                        printf("Message found l=%d\n", l);
                         // convert the message in send_buff[j] to have the sequence number
                         char buffer[MAX_PAYLOAD_SIZE];
-                        convert_msg(buffer, SM[i].send_buff[j], SM[i].swnd.seq_nums[j]);
-                        sendto(SM[i].udp_socket_id, buffer, sizeof(buffer), 0, NULL, 0);
+                        convert_msg(buffer, SM[i].send_buff[j], send_seq_nums[j]);
+                        printf("converted buffer %s", buffer);
+                        struct sockaddr_in servaddr;
+                        servaddr.sin_family = AF_INET;
+                        servaddr.sin_port = htons(SM[i].other_end_port);
+                        err = inet_aton(SM[i].other_end_ip, &servaddr.sin_addr);
+                        printf("destport=%d ", SM[i].other_end_port);
+                        printf("ip=%s i=%d udpsock=%d\n", SM[i].other_end_ip, i, SM[i].udp_socket_id);
+                        if (err == 0)
+                        {
+                            printf("Error in ip-conversion\n");
+                            printf("Before S exit\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        printf("making sendto call\n");
+                        printf("SM[i].swnd.size=%d\n", SM[i].swnd.size);
+                        int j = sendto(SM[i].udp_socket_id, (char *)buffer, strlen(buffer), 0, (struct sockaddr *)&servaddr, sizeof(servaddr));
                         SM[i].swnd.size--;
+                        printf("SM[i].swnd.size=%d\n", SM[i].swnd.size);
+                        // recvfrom acknowledgement from the dest address and ip
+                        int servaddrlen = sizeof(servaddr);
+                        recvfrom(SM[i].udp_socket_id, buffer, sizeof(buffer), 0, (struct sockaddr *)&servaddr, &servaddrlen);
+
+                        printf("j=%d", j);
                     }
                 }
             }
@@ -336,7 +406,6 @@ int main()
     //  int * mtp_errno;
 
     shmid1 = shmget(key5, sizeof(int), 0777 | IPC_CREAT);
-    shmid2 = shmget(key1, sizeof(SOCK_INFO), IPC_CREAT | 0666);
 
     if (shmid1 == -1)
     {
@@ -350,6 +419,8 @@ int main()
         perror("shmat");
         exit(EXIT_FAILURE);
     }
+
+    shmid2 = shmget(key1, sizeof(SOCK_INFO), IPC_CREAT | 0666);
 
     if (shmid2 == -1)
     {
@@ -403,6 +474,7 @@ int main()
 
         for (int j = 0; j < MAX_RECEIVE_BUFF; ++j)
         {
+            SM[i].rwnd.size = 5;
             for (int k = 0; k < MAX_PAYLOAD_SIZE; ++k)
             {
                 SM[i].receive_buff[j][k] = '\0';
@@ -411,6 +483,7 @@ int main()
 
         for (int j = 0; j < MAX_SEND_BUFF; ++j)
         {
+            SM[i].swnd.size = 5;
             for (int k = 0; k < MAX_PAYLOAD_SIZE; ++k)
             {
                 SM[i].send_buff[j][k] = '\0';
@@ -435,19 +508,20 @@ int main()
     pthread_create(&thread_garbage, &garbage_attr, garbage_func, (void *)SM);
     // thread creation done
 
+    sockinfo->IP.sin_addr.s_addr == INADDR_ANY;
+    sockinfo->sock_id = 0;
+    sockinfo->port = 0;
+    sockinfo->errorno == 0;
     while (1)
     {
         // inet_pton(AF_INET, "127.0.0.1", &sockinfo->IP.sin_addr.s_addr);
-        // sockinfo->IP.sin_addr.s_addr == INADDR_ANY;  removing this line
-        sockinfo->sock_id = 0;
-        sockinfo->port = 0;
-        sockinfo->errorno == 0;
         printf("waiting\n");
         semaphore_wait(semid1);
         printf("semaphore worked\n");
-        printf("%d\n%d\n%d\n", sockinfo->sock_id, sockinfo->port, sockinfo->errorno);
+        printf("%d\n %d\n %d\n", sockinfo->sock_id, sockinfo->port, sockinfo->errorno);
         if (sockinfo->errorno == 0 && sockinfo->port == 0 && sockinfo->sock_id == 0)
         {
+
             // char ip_str[INET_ADDRSTRLEN];
             // inet_ntop(AF_INET, &sockinfo->IP.sin_addr.s_addr, ip_str, INET_ADDRSTRLEN);
             printf("It is a UDP socket call\n");
@@ -462,32 +536,27 @@ int main()
                 sockinfo->errorno = errno;
             }
             printf("Socket created\n");
-            printf("temp_sockid: %d\n", temp_sockid);
-            sockinfo->udp_sock_id = temp_sockid;
-            // sockinfo->sock_id = temp_sockid;
-            printf("sockinfo->sockid: %d\n", sockinfo->sock_id);
-            printf("sockinfo->udp_sock_id: %d\n", sockinfo->udp_sock_id);
+            sockinfo->sock_id = temp_sockid;
             semaphore_signal(semid2);
         }
         else if (sockinfo->port != 0) //&& sockinfo->IP.sin_addr.s_addr != INADDR_ANY
         {
             printf("It is a bind call\n");
             // printf("port: %d\n", sockinfo->port);
+            printf("%d\n %d\n %d\n", sockinfo->sock_id, sockinfo->port, sockinfo->errorno);
             struct sockaddr_in socket;
             socket.sin_family = AF_INET;
-            // socket.sin_addr.s_addr = sockinfo->IP;
-            inet_pton(AF_INET, sockinfo->IP, &socket.sin_addr.s_addr);
+            socket.sin_addr.s_addr = sockinfo->IP.sin_addr.s_addr;
             socket.sin_port = htons(sockinfo->port);
-            printf("Binding\n");
-            printf("sockid: %d\n", sockinfo->sock_id);
 
-            printf("port: %d\n", sockinfo->port);
-            printf("IP: %s\n", sockinfo->IP);
-            if ((bind(sockinfo->sock_id, (struct sockaddr *)&socket, sizeof(socket))) < 0)
+            printf("Binding\n");
+            int h = bind(sockinfo->sock_id, (struct sockaddr *)&socket, sizeof(socket));
+            if (h < 0)
             {
-                printf("Error in binding\n");
+                printf("Error in binding %d\n", h);
+
                 sockinfo->sock_id = -1;
-                sockinfo->errorno = errno;
+                sockinfo->errorno = -1;
             }
             semaphore_signal(semid2);
         }
