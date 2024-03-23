@@ -37,6 +37,7 @@
 #define KEY_SEM 2
 
 float p = 0.75;
+MTPSocketEntry *SM1;
 // typedef struct SOCK_INFO
 // {
 //     int sock_id;
@@ -377,9 +378,33 @@ void *S_func(void *arg)
     return NULL;
 }
 
+void sigint_handler()
+{
+
+    // Iterate through the MTP socket table
+    for (int i = 0; i < MAX_MTP_SOCK; i++)
+    {
+        // Check if the socket entry is in use and its associated process is not running
+        if (!SM1[i].is_free && kill(SM1[i].process_id, 0) == -1)
+        {
+
+            SM1[i].is_free = 1;
+            SM1[i].process_id = 0;
+            SM1[i].udp_socket_id = 0;
+            SM1[i].other_end_ip[0] = '\0';
+            SM1[i].other_end_port = 0;
+            memset(SM1[i].receive_buff, 0, sizeof(SM1[i].receive_buff));
+            memset(SM1[i].send_buff, 0, sizeof(SM1[i].send_buff));
+        }
+    }
+    printf("exiting gracefully\n");
+    exit(EXIT_SUCCESS);
+}
+
 int main()
 {
 
+    signal(SIGINT, sigint_handler);
     printf("init working\n");
     int semid1, semid2;
     key_t key1 = ftok(".", 1);
@@ -458,6 +483,7 @@ int main()
         perror("shmat not working");
         exit(EXIT_FAILURE);
     }
+    SM1 = SM;
     // SM[24].arr[24] = 100;
     // printf("output: %d\n", SM[24].arr[24]);
 
