@@ -41,6 +41,7 @@ int main()
         return 0;
     }
     printf("Bind successful\n");
+    printf("sockfd: %d\n", sockfd);
 
     char buffer[1000];
     while (1)
