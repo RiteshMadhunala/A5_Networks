@@ -259,7 +259,9 @@ void *R_func(void *arg)
                         char ack_msg[MAX_PAYLOAD_SIZE];
                         // sprintf(ack_msg, "%d", SM[i].rwnd.seq_nums[0]);
                         // strcat(ack_msg, "0001");
-                        // convert_msg(ack_msg,NULL, seq_num, 2);
+                        char ackleft[MAX_PAYLOAD_SIZE - 1] = {'\0'};
+                        convert_msg(ack_msg, ackleft, seq_num, 2);
+
                         printf("ack_msg:%s\n", ack_msg);
                         printf("calling sendto\n");
                         sendto(SM[i].udp_socket_id, ack_msg, sizeof(ack_msg), 0, (struct sockaddr *)&client, len);
