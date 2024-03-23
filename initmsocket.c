@@ -87,20 +87,46 @@ MTPSocketEntry *SM1;
 int err;
 int check_msg(char *msg)
 {
-    if (msg[0] == '0' && msg[1] == '0' && msg[2] == '0' && msg[3] == '0')
-    {
-        return 1;
-    }
-    else if (msg[0] == '0' && msg[1] == '0' && msg[2] == '0' && msg[3] == '1')
-    {
-        return 0;
-    }
-    else
-    {
-        return -1;
-    }
+    // in msg extract the first character and convert it into integer
 }
 
+void convert_msg(char *buffer, char *msg, int seq_num, int type)
+{
+    // char seq_num_str[4];
+    // sprintf(seq_num_str, "%d", seq_num);
+    // printf("seq_num_str=%s\n", seq_num_str);
+    // strcpy(buffer, seq_num_str);
+    // printf("buffer=%s\n", buffer);
+    // strcat(buffer, msg);
+    // printf("buffer=%s\n", buffer);
+    // printf("msg:%s\n", msg);
+    // memset(buffer, 0, MAX_PAYLOAD_SIZE);
+    // printf("seq_num = %d\n", seq_num);
+    // int temp = seq_num & 0xF0;
+    // // temp = temp << 4;
+    // printf("temp:%d\n", temp);
+    // buffer[0] = (char)temp;
+    // buffer[0] = (char)((seq_num & 0x0F) << 4);
+    // buffer[0] = (char)seq_num;
+    // printf("buffer[0]:%c\n", buffer[0]);
+    // strncpy(buffer + 1, msg, MAX_PAYLOAD_SIZE - 1);
+    // printf("buffer:%s\n", buffer);
+    // sprintf(buffer, "%d", seq_num);
+    // printf("len: %ld\n", strlen(buffer));
+    // char *temp_type;
+    // sprintf(temp_type, "%d", type);
+    // printf("len_temp: %ld\n", strlen(temp_type));
+    // strcat(buffer, temp_type);
+    // // strcpy(buffer,seq_num);
+    // strcat(buffer, msg);
+    // printf("buffer:%s\n", buffer);
+    // printf("buff_len: %ld\n", strlen(buffer));
+    buffer[0] = (type << 4) | (seq_num & 0x0F);
+    strncpy(buffer + 1, msg, MAX_PAYLOAD_SIZE - 1);
+    printf("buffer:%s\n", buffer);
+    printf("buffer[0]:%d\n", buffer[0]);
+    printf("buff_len: %ld\n", strlen(buffer));
+}
 void *R_func(void *arg)
 {
     printf("R_func running\n");
@@ -140,7 +166,7 @@ void *R_func(void *arg)
 
             for (int i = 0; i < MAX_MTP_SOCK; i++)
             {
-                if (SM[i].udp_socket_id != 0)
+                if (SM[i].udp_socket_id >= 0)
                 {
                     FD_SET(SM[i].udp_socket_id, &readfds);
                     if (SM[i].udp_socket_id > maxfd)
@@ -195,47 +221,70 @@ void *R_func(void *arg)
                     int len = sizeof(client);
                     recvfrom(SM[i].udp_socket_id, buffer, sizeof(buffer), 0, (struct sockaddr *)&client, &len);
 
-                    if (dropMessage(p))
-                    {
-                        printf("Dropping Message\n");
-                        continue;
-                    }
-                    else
-                    {
-                        printf("Received: %s\n", buffer);
-                        // check the message type if it is a data message store in the receive buffer and send an ack back
-                        if (check_msg(buffer) == 1)
-                        {
-                            // if msg type is data message
-                            // if the seq_num is in order then store in receive buffer
+                    // if (dropMessage(p))
+                    // {
+                    //     printf("Dropping Message\n");
+                    //     continue;
+                    // }
+                    // else
+                    // {
+                    // find SM[i] entry wher udp_socket_id is equal to current udp_socket_id
 
-                            strcpy(SM[i].receive_buff[MAX_RECEIVE_BUFF - SM[i].rwnd.size], buffer);
-                            SM[i].rwnd.size--;
-                            // send an ack back with the last acknowledged seq number and rwnd size
-                            char ack_msg[MAX_PAYLOAD_SIZE];
-                            sprintf(ack_msg, "%d", SM[i].rwnd.seq_nums[0]);
-                            strcat(ack_msg, "0001");
-                            sendto(SM[i].udp_socket_id, ack_msg, sizeof(ack_msg), 0, (struct sockaddr *)&client, len);
-                        }
-                        else if (check_msg(buffer) == 0)
+                    int type = (buffer[0] >> 4) & 0x0F;
+                    int seq_num = (buffer[0] & 0x0F);
+                    printf("type=%d\n", type);
+                    printf("seq_num=%d\n", seq_num);
+                    printf("Received: %s\n", buffer);
+                    // check the message type if it is a data message store in the receive buffer and send an ack back
+                    if (type == 1)
+                    {
+                        // if msg type is data message
+                        // if the seq_num is in order then store in receive buffer
+                        int buffer_index;
+                        for (int j = 0; j < MAX_RECEIVE_BUFF; j++)
                         {
-                            // if msg type is ack message
-                            // if the ack number is the last sent seq number then remove the message from the send buffer
-                            // and update the send window
-                            if (SM[i].swnd.seq_nums[0] == buffer[0])
+                            if (SM[i].receive_buff[j][0] == '\0')
                             {
-                                SM[i].swnd.size++;
-                                for (int j = 0; j < MAX_SEND_BUFF; j++)
+                                buffer_index = j;
+                                break;
+                            }
+                        }
+
+                        strcpy(SM[i].receive_buff[buffer_index], buffer);
+                        printf("SM[i].receive_buff[buffer_index]=%s\n", SM[i].receive_buff[buffer_index]);
+                        printf("SM[i].rwnd.size=%d\n", SM[i].rwnd.size);
+                        SM[i].rwnd.size--;
+                        printf("SM[i].rwnd.size=%d\n", SM[i].rwnd.size);
+                        // send an ack back with the last acknowledged seq number and rwnd size
+                        char ack_msg[MAX_PAYLOAD_SIZE];
+                        // sprintf(ack_msg, "%d", SM[i].rwnd.seq_nums[0]);
+                        // strcat(ack_msg, "0001");
+                        char ackleft[MAX_PAYLOAD_SIZE - 1] = {'\0'};
+                        convert_msg(ack_msg, ackleft, seq_num, 2);
+
+                        printf("ack_msg:%s\n", ack_msg);
+                        printf("calling sendto\n");
+                        sendto(SM[i].udp_socket_id, ack_msg, sizeof(ack_msg), 0, (struct sockaddr *)&client, len);
+                    }
+                    else if (check_msg(buffer) == 0)
+                    {
+                        // if msg type is ack message
+                        // if the ack number is the last sent seq number then remove the message from the send buffer
+                        // and update the send window
+                        if (SM[i].swnd.seq_nums[0] == buffer[0])
+                        {
+                            SM[i].swnd.size++;
+                            for (int j = 0; j < MAX_SEND_BUFF; j++)
+                            {
+                                if (SM[i].swnd.seq_nums[j] == buffer[0])
                                 {
-                                    if (SM[i].swnd.seq_nums[j] == buffer[0])
-                                    {
-                                        SM[i].swnd.seq_nums[j] = -1;
-                                        break;
-                                    }
+                                    SM[i].swnd.seq_nums[j] = -1;
+                                    break;
                                 }
                             }
                         }
                     }
+                    // }
                 }
             }
         }
@@ -243,32 +292,6 @@ void *R_func(void *arg)
     return NULL;
 
     // while adding in the send buffer or while making the send to call we take care of the seq_num
-}
-void convert_msg(char *buffer, char *msg, int seq_num)
-{
-    // char seq_num_str[4];
-    // sprintf(seq_num_str, "%d", seq_num);
-    // printf("seq_num_str=%s\n", seq_num_str);
-    // strcpy(buffer, seq_num_str);
-    // printf("buffer=%s\n", buffer);
-    // strcat(buffer, msg);
-    // printf("buffer=%s\n", buffer);
-    // printf("msg:%s\n", msg);
-    // memset(buffer, 0, MAX_PAYLOAD_SIZE);
-    // printf("seq_num = %d\n", seq_num);
-    // int temp = seq_num & 0xF0;
-    // // temp = temp << 4;
-    // printf("temp:%d\n", temp);
-    // buffer[0] = (char)temp;
-    // buffer[0] = (char)((seq_num & 0x0F) << 4);
-    // buffer[0] = (char)seq_num;
-    // printf("buffer[0]:%c\n", buffer[0]);
-    // strncpy(buffer + 1, msg, MAX_PAYLOAD_SIZE - 1);
-    printf("buffer:%s\n", buffer);
-    sprintf(buffer, "%d", seq_num);
-    // strcpy(buffer,seq_num);
-    strcat(buffer, msg);
-    printf("buffer:%s\n", buffer);
 }
 
 void *garbage_func(void *arg)
@@ -340,7 +363,8 @@ void *S_func(void *arg)
                         printf("Message found l=%d\n", l);
                         // convert the message in send_buff[j] to have the sequence number
                         char buffer[MAX_PAYLOAD_SIZE];
-                        convert_msg(buffer, SM[i].send_buff[j], send_seq_nums[j]);
+                        int type = 1; // data message
+                        convert_msg(buffer, SM[i].send_buff[j], send_seq_nums[j], type);
                         printf("converted buffer %s", buffer);
                         struct sockaddr_in servaddr;
                         servaddr.sin_family = AF_INET;
@@ -365,7 +389,7 @@ void *S_func(void *arg)
                         // recvfrom acknowledgement from the dest address and ip
                         int servaddrlen = sizeof(servaddr);
                         recvfrom(SM[i].udp_socket_id, buffer, sizeof(buffer), 0, (struct sockaddr *)&servaddr, &servaddrlen);
-
+                        printf("ack received:%s\n", buffer);
                         // if didnot receive acknowledgement send the msg again after a timeout
 
                         printf("j=%d", j);

@@ -13,10 +13,8 @@ msocket.o: msocket.c
 initmsocket.o: initmsocket.c
 	gcc -c initmsocket.c
 
-user1:  
-	gcc -DDEBUG -o user1 user1.c -L. -lmsocket
-
-user2:
+user:  
+	gcc -o user1 user1.c -L. -lmsocket
 	gcc -o user2 user2.c -L. -lmsocket
 
 clean:
